@@ -163,7 +163,7 @@ function LoadedViewer({ trace, tracePath, params, theme, toggleTheme }: ViewerPr
   useEffect(() => { document.title = `${title} · ${SITE_TITLE}` }, [title])
 
   const { lines, displayLine } = useLineModels(trace, index, path, rawMode)
-  const currentLine = displayLine(lineNumber)
+  const currentLine = displayLine(lineNumber, showNotes)
   const lineEnvs = useMemo(
     () => showLineEnv ? lineEnvsFor(trace, path, reveal ? baseStep : numSteps - 1) : null,
     [showLineEnv, trace, path, reveal, baseStep, numSteps],

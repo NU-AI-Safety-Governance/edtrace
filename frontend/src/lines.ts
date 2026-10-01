@@ -25,7 +25,7 @@ export interface LineModel {
 export interface LineModels {
   lines: LineModel[]
   /** Line number -> the line it is shown as (continuation lines of a multi-line call map to its first line) */
-  displayLine: (lineNumber: number) => number
+  displayLine: (lineNumber: number, showNotes?: boolean) => number
 }
 
 export function useLineModels(trace: Trace, index: TraceIndex, path: string, rawMode: boolean): LineModels {
@@ -93,6 +93,16 @@ export function useLineModels(trace: Trace, index: TraceIndex, path: string, raw
       }
       start = end
     }
-    return { lines, displayLine: (lineNumber: number) => statementStart.get(lineNumber) ?? lineNumber }
+    return {
+      lines,
+      displayLine: (lineNumber: number, showNotes = true) => {
+        const number = statementStart.get(lineNumber) ?? lineNumber
+        if (!showNotes && lines.some((line) => line.number === number && line.kind === 'note')) {
+          // Keep a visible anchor while stepping through hidden speaker notes.
+          return lines.findLast((line) => line.number < number && line.kind !== 'note' && line.kind !== 'blank')?.number ?? number
+        }
+        return number
+      },
+    }
   }, [trace, index, path, rawMode])
 }
