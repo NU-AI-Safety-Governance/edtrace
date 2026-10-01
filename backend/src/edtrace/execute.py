@@ -172,6 +172,15 @@ def to_primitive(value: any) -> any:
     return str(value)
 
 
+def json_safe(contents: any) -> any:
+    """Replace inf/nan (which JSON can't represent) with strings, recursively."""
+    if isinstance(contents, float) and not math.isfinite(contents):
+        return str(contents)
+    if isinstance(contents, list):
+        return [json_safe(item) for item in contents]
+    return contents
+
+
 def to_serializable_value(value: any) -> Value:
     """Convert `value` to something that's serializable to JSON."""
     value_type = get_type_str(value)
@@ -187,9 +196,9 @@ def to_serializable_value(value: any) -> Value:
     if isinstance(value, np.generic):  # numpy scalars (np.int64, np.float32, ...)
         return Value(type=value_type, dtype=str(value.dtype), contents=to_serializable_value(value.item()).contents)
     if isinstance(value, np.ndarray):
-        return Value(type=value_type, dtype=str(value.dtype), shape=list(value.shape), contents=value.tolist())
+        return Value(type=value_type, dtype=str(value.dtype), shape=list(value.shape), contents=json_safe(value.tolist()))
     if torch is not None and isinstance(value, torch.Tensor):
-        return Value(type=value_type, dtype=str(value.dtype), shape=list(value.shape), contents=value.tolist())
+        return Value(type=value_type, dtype=str(value.dtype), shape=list(value.shape), contents=json_safe(value.tolist()))
 
     # Symbols
     if sympy is not None and value_type.startswith("sympy.core."):
@@ -288,19 +297,21 @@ def execute(module_name: str, inspect_all_variables: bool) -> Trace:
         if item.function_name in ("<listcomp>", "<lambda>"):
             return trace_func
 
-        # Handle @stepover (don't recurse)
+        # Handle @stepover (don't trace into calls made from this line).  A stepover
+        # ends when its frame moves to another line or returns; repeated events on
+        # the same line (e.g., each iteration of a comprehension) don't end it.
+        depth = len(stack)
+        stepovers[:] = [
+            (path, line_number, d) for path, line_number, d in stepovers
+            if d < depth or (d == depth and (path, line_number) == (item.path, item.line_number))
+        ]
         directives = parse_directives(item.code)
         if any(directive.name == DIRECTIVE_STEPOVER for directive in directives):
-            # If stepping over this line
-            if len(stepovers) > 0 and stepovers[-1] == (item.path, item.line_number):
-                # Stop skipping since we're back to this line
-                stepovers.pop()
-            else:
-                # Just starting to skip starting here
-                stepovers.append((item.path, item.line_number))
-        
-        # Skip everything that is strictly under stepovers
-        if any(stepover[0] == item.path and stepover[1] == item.line_number for stepover in stepovers for item in stack[:-1]):
+            if (item.path, item.line_number, depth) not in stepovers:
+                stepovers.append((item.path, item.line_number, depth))
+
+        # Skip everything inside calls made from a stepover line
+        if any(d < depth for _, _, d in stepovers):
             return trace_func
 
         print(f"  [{len(steps)} {os.path.basename(item.path)}:{item.line_number}] {item.code}")
@@ -440,5 +451,5 @@ if __name__ == "__main__":
         output_path = os.path.join(args.output_path, f"{module}.json")
         print(f"Saving trace to {output_path}...")
         with open(output_path, "w") as f:
-            json.dump(asdict(trace), f, indent=2)
+            json.dump(asdict(trace), f, indent=2, allow_nan=False)  # Fail loudly rather than write invalid JSON
         update_index(args.output_path, module, trace)

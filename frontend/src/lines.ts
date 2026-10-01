@@ -45,9 +45,13 @@ export function useLineModels(trace: Trace, index: TraceIndex, path: string, raw
         return
       }
       if (hidden.has(number)) return
-      const renderings = rawMode ? [] : index.renderings.get(locationKey(path, number)) ?? []
+      const renderings = rawMode ? [] : [...index.renderings.get(locationKey(path, number)) ?? []]
+      if (renderings.length > 0) {
+        // A multi-line statement (e.g., text("...", ...), link(...)) shows as one line with all of its renderings
+        continuationUntil = statementEnd(source, i)
+        for (let n = number + 1; n <= continuationUntil + 1; n++) renderings.push(...index.renderings.get(locationKey(path, n)) ?? [])
+      }
       const shown = renderings.filter((r) => r.type !== 'note')
-      if (renderings.length > 0) continuationUntil = statementEnd(source, i)
       const kind = shown.length > 0 ? 'prose' : renderings.length > 0 ? 'note' : text.trim() === '' ? 'blank' : 'code'
       lines.push({
         number,
