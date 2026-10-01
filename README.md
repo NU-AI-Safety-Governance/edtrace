@@ -1,54 +1,102 @@
 # edtrace
 
-edtrace (Educational Tracer) is a tool that allows you write a Python program,
-capture an execution trace of it, and step through the code in a web browser.
-Some of the code elements can produce markdown, images, and plots, allowing for
-an enhanced multimedia experience.
+edtrace (Educational Tracer) lets you write a Python program, capture an
+execution trace of it, and step through the code in a web browser. Calls like
+`text()`, `image()`, and `plot()` render markdown, figures, and charts in place
+of the code that produced them, so a Python program can replace lecture notes or
+slides.
 
-edtrace was primarily designed to create **executable lectures**, where a
-Python program replaces lecture notes or slides, allowing for deep integration
-of code and ideas.  Or it can simply be used on any Python program, and allow a
-user to explore its execution.
+This is a fork of [percyliang/edtrace](https://github.com/percyliang/edtrace)
+with a rewritten viewer (TypeScript + React):
 
-1. Create a simple Python program `hello.py`:
+- Code and prose read differently: code lines are grouped into blocks and
+  everything else is typeset (headings, lists, callouts, tables, KaTeX math)
+- Outline sidebar built from your headings, with the current section highlighted
+- Variables panel with call stack, typed values, and tensor heatmaps
+- Clickable/draggable progress bar with section ticks
+- Light and dark themes, zoom, citation hover cards, image lightbox
+- Live reload: re-run a lecture and the open browser tab updates in place
+- Home page listing all lectures (`var/traces/index.json`)
+- Presenter mode (`P`) and a synced speaker view (`S`) with notes, next step, and a timer
+- `card()` for case studies (label, title, body, tags, cited sources, caveat)
+- `torch` and `sympy` are optional backend dependencies
+
+## Quick start
+
+1. Write `hello.py`:
 
 ```python
 from edtrace import text
 
 def main():
+    text("# Hello")
     x = 3  # @inspect x
     text("Welcome!")
     x += 1  # @inspect x
 ```
 
-2. Execute the program and record the trace:
+2. Record the trace (writes `var/traces/hello.json` and updates `var/traces/index.json`):
 
 ```sh
-uv add --upgrade edtrace
 python -m edtrace.execute -m hello
 ```
-The results are saved in `var/traces/hello.json`.
 
-3. View the trace in a web browser (this part is a bit clunky):
+3. View it. From the directory containing `var/`:
 
 ```sh
-git clone https://github.com/percyliang/edtrace
+pnpm --dir path/to/edtrace/frontend install
+pnpm --dir path/to/edtrace/frontend dev
 ```
 
-For development:
+and open http://localhost:5173. The dev server serves files from the directory
+you ran it from (override with `EDTRACE_CONTENT_DIR`).
+
+## Writing lectures
+
+| Call | Shows |
+|------|-------|
+| `text("...")` | One line of markdown. Leading `#`, `-`, `1.`, `>`, `> [!NOTE]` make it a heading, bullet, numbered item, quote, or callout. `$...$` / `$$...$$` is math. A multi-line string is rendered as a full markdown block (e.g., a table). |
+| `image(path_or_url, width=...)` | An image (URLs are downloaded to `var/files`) |
+| `video(path_or_url)` | A video |
+| `link(url)`, `link(Reference(...))` | A citation chip with details on hover (arXiv links are looked up) |
+| `link(function)` | A link that jumps to the function's definition |
+| `plot(vega_lite_spec)` | A Vega-Lite chart |
+| `card(title, body=..., eyebrow=..., tags=[...], sources=[...], caveat=...)` | A card, e.g. a case study with cited sources |
+| `note("...")` | Speaker notes (shown in the speaker view, or inline with N) |
+
+Directives go in comments:
+
+- `# @inspect x y` shows the values of `x` and `y` after the line runs
+- `# @clear x` stops showing `x`
+- `# @stepover` doesn't trace into calls on this line
+- `# @hide` hides the line
+
+## Viewer shortcuts
+
+| Key | Action |
+|-----|--------|
+| `→` / `l`, `←` / `h` | Step forward / back |
+| `⇧→` / `j` / `PgDn`, `⇧←` / `k` / `PgUp` | Step over / back over |
+| `u` | Step out of the current function |
+| `Home`, `End` | First / last step |
+| `A` | Reveal lines as you step (presenting) |
+| `R` | Raw code |
+| `e`, `E` | Inline values, variables panel |
+| `N` | Speaker notes |
+| `o`, `t`, `+`/`-`/`0` | Outline, theme, zoom |
+| `P`, `S` | Present (fullscreen), speaker view (synced second window) |
+| `?` | All shortcuts |
+
+Every position is a URL (`?trace=hello&step=12`), so you can link to any step.
+
+## Building a static site
+
+From the directory containing `var/`:
+
 ```sh
-npm --prefix=edtrace/frontend run dev
+pnpm --dir path/to/edtrace/frontend build
 ```
-and go to [http://localhost:5173](http://localhost:5173) and type in `var/traces/hello.json`.
 
-For production:
-```sh
-mkdir dist
-(cd dist && ln -s ../var && ln -s ../images)    # Symlink so we don't have to make two copies
-export VITE_EDTRACE_BASE_DIR=/`basename $PWD`   # Assume this will be hosted at ???.github.io/$EDTRACE_BASE_DIR
-export VITE_EDTRACE_DIST_DIR=$PWD               # Absolute path
-
-npm --prefix=edtrace/frontend run build
-```
-and this writes to `.`.  Git push `index.html` and `assets` so it will show up publicly
-(e.g., on a github.io page).
+This writes `index.html` and `assets/` next to `var/` (the site uses relative
+paths, so it can be served from any subpath, e.g. GitHub Pages). Set
+`VITE_EDTRACE_SITE_TITLE` in a `.env` file there to name the site.
