@@ -1,14 +1,26 @@
 import argparse
+import re
 import math
 import importlib
 import inspect
+import io
+import tokenize
 import sys
 import json
 import traceback
-import numpy as np
-import torch
-import sympy
 import os
+from datetime import datetime, timezone
+import numpy as np
+
+# Optional: only needed to inspect tensors / symbolic expressions
+try:
+    import torch
+except ImportError:
+    torch = None
+try:
+    import sympy
+except ImportError:
+    sympy = None
 from dataclasses import dataclass, asdict, field, is_dataclass, fields
 from .execute_util import Rendering, pop_renderings
 from .file_util import relativize
@@ -85,16 +97,32 @@ class Directive:
     """The arguments of the directive."""
 
 
+def get_comment(line: str) -> str | None:
+    """
+    Return the text of the comment on `line` (without the "#"), ignoring "#"
+    inside string literals (e.g., text("# @inspect x") has no comment).
+    """
+    if "#" not in line:
+        return None
+    try:
+        for token in tokenize.generate_tokens(io.StringIO(line.strip()).readline):
+            if token.type == tokenize.COMMENT:
+                return token.string[1:]
+    except (tokenize.TokenError, SyntaxError):
+        pass  # Partial statement (e.g., inside a multi-line call); tokens seen so far still count
+    return None
+
+
 def parse_directives(line: str) -> list[Directive]:
     """
     Parse the directives from the line.
     Examples:
         "... # @inspect x y @hide" -> [Directive(name="@inspect", args=["x", "y"]), Directive(name="@hide", args=[])]
     """
-    # Get tokens after the "#"
-    if "#" not in line:
+    comment = get_comment(line)
+    if comment is None:
         return []
-    tokens = line.split("#")[1].split()
+    tokens = comment.split()
     directives: list[Directive] = []
     for token in tokens:
         if token.startswith("@"):
@@ -156,17 +184,15 @@ def to_serializable_value(value: any) -> Value:
         return Value(type=value_type, contents=value)
 
     # Tensors
-    if isinstance(value, (np.int64,)):
-        return Value(type=value_type, contents=int(value))  # Hope no rounding issues
-    if isinstance(value, (np.float64,)):
-        return Value(type=value_type, contents=float(value))  # Hope no rounding issues
+    if isinstance(value, np.generic):  # numpy scalars (np.int64, np.float32, ...)
+        return Value(type=value_type, dtype=str(value.dtype), contents=to_serializable_value(value.item()).contents)
     if isinstance(value, np.ndarray):
         return Value(type=value_type, dtype=str(value.dtype), shape=list(value.shape), contents=value.tolist())
-    if isinstance(value, torch.Tensor):
+    if torch is not None and isinstance(value, torch.Tensor):
         return Value(type=value_type, dtype=str(value.dtype), shape=list(value.shape), contents=value.tolist())
 
     # Symbols
-    if value_type.startswith("sympy.core."):
+    if sympy is not None and value_type.startswith("sympy.core."):
         if isinstance(value, sympy.core.numbers.Integer):
             return Value(type=value_type, contents=int(value))
         if isinstance(value, sympy.core.numbers.Float):
@@ -367,6 +393,36 @@ def compute_hidden_line_numbers(files: dict[str, str]) -> dict[str, list[int]]:
 
 
 
+def lecture_title(trace: Trace) -> str | None:
+    """The first top-level markdown heading (e.g., text("## Lecture 1: ...")), if any."""
+    for step in trace.steps:
+        for rendering in step.renderings:
+            if rendering.type == "markdown" and isinstance(rendering.data, str):
+                match = re.match(r"^#{1,2}\s+(.+?)\s*#*$", rendering.data.strip())
+                if match:
+                    return match.group(1)
+    return None
+
+
+def update_index(output_path: str, module: str, trace: Trace):
+    """Record `module` in index.json, which the viewer uses to list all lectures."""
+    index_path = os.path.join(output_path, "index.json")
+    lectures = []
+    if os.path.exists(index_path):
+        with open(index_path) as f:
+            lectures = json.load(f).get("lectures", [])
+    lectures = [lecture for lecture in lectures if lecture["module"] != module]
+    lectures.append({
+        "module": module,
+        "title": lecture_title(trace),
+        "steps": len(trace.steps),
+        "updated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    })
+    lectures.sort(key=lambda lecture: lecture["module"])
+    with open(index_path, "w") as f:
+        json.dump({"lectures": lectures}, f, indent=2)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--module", help="List of modules to execute (e.g., lecture_01)", type=str, nargs="+")
@@ -385,3 +441,4 @@ if __name__ == "__main__":
         print(f"Saving trace to {output_path}...")
         with open(output_path, "w") as f:
             json.dump(asdict(trace), f, indent=2)
+        update_index(args.output_path, module, trace)

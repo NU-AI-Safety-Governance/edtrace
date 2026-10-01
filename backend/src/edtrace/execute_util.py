@@ -28,6 +28,9 @@ class Rendering:
     - image: an image (data = url)
     - video: a video (data = url)
     - link: an link to internal code or external URL
+    - plot: a Vega-Lite spec
+    - card: a card (data = {title, body, eyebrow, tags, sources, caveat})
+    - note: speaker notes
     """
     type: str
     data: str | None = None
@@ -129,6 +132,30 @@ def link(arg: type | Reference | str | None = None, style: dict | None = None, *
 def plot(spec: any):
     """Show a plot given `spec`."""
     _current_renderings.append(Rendering(type="plot", data=spec))
+
+
+def card(
+    title: str,
+    body: str | None = None,
+    eyebrow: str | None = None,
+    tags: list[str] | None = None,
+    sources: list[Reference | str] | None = None,
+    caveat: str | None = None,
+    style: dict | None = None,
+):
+    """
+    Show a card (e.g., a case study): a small `eyebrow` label, a `title`, a
+    markdown `body`, `tags`, cited `sources` (references or URLs), and a `caveat`.
+    """
+    data = {
+        "title": title,
+        "body": body,
+        "eyebrow": eyebrow,
+        "tags": tags or [],
+        "sources": [source if isinstance(source, Reference) else url_reference(source) for source in sources or []],
+        "caveat": caveat,
+    }
+    _current_renderings.append(Rendering(type="card", data=data, style=style))
 
 
 def note(message: str):
