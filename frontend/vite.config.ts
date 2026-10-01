@@ -34,7 +34,7 @@ const MIME_TYPES: Record<string, string> = {
  * Build: write index.html + assets/ into the content directory (so it can be
  * served from GitHub Pages next to var/ and images/).
  */
-function edtraceContent(): Plugin {
+function edtraceContent(isBuild: boolean): Plugin {
   return {
     name: 'edtrace-content',
 
@@ -70,7 +70,7 @@ function edtraceContent(): Plugin {
 
     buildStart() {
       // Hashed bundles from previous builds would otherwise pile up
-      if (!isStandalone) fs.rmSync(path.join(contentDir, 'assets'), { recursive: true, force: true })
+      if (isBuild && !isStandalone) fs.rmSync(path.join(contentDir, 'assets'), { recursive: true, force: true })
     },
   }
 }
@@ -87,5 +87,5 @@ export default defineConfig(({ command }) => ({
     emptyOutDir: isStandalone,
     chunkSizeWarningLimit: 2000,
   },
-  plugins: [react(), edtraceContent()],
+  plugins: [react(), edtraceContent(command === 'build')],
 }))
