@@ -7,46 +7,51 @@ export type Actions = Record<
   () => void
 >
 
+type KeyInput = Pick<KeyboardEvent, 'key' | 'shiftKey' | 'altKey' | 'ctrlKey' | 'metaKey' | 'isComposing'>
+type KeyAction = keyof Actions | 'escape'
+
+const keyBindings: Readonly<Partial<Record<string, KeyAction>>> = {
+  ArrowUp: 'overBackward', ArrowDown: 'overForward',
+  l: 'forward', h: 'backward', j: 'overForward', k: 'overBackward',
+  PageDown: 'overForward', PageUp: 'overBackward',  // Presentation clickers
+  u: 'out', Home: 'first', End: 'last',
+  a: 'toggleAnimate', A: 'toggleAnimate',
+  r: 'toggleRaw', R: 'toggleRaw',
+  v: 'toggleEnv', V: 'toggleEnv', E: 'toggleEnv',
+  e: 'toggleLineEnv',
+  n: 'toggleNotes', N: 'toggleNotes',
+  o: 'toggleOutline', O: 'toggleOutline',
+  t: 'toggleTheme', T: 'toggleTheme',
+  g: 'home',
+  '/': 'toggleHelp', '?': 'toggleHelp',
+  p: 'togglePresent', P: 'togglePresent',
+  s: 'openSpeaker', S: 'openSpeaker',
+  '+': 'zoomIn', '=': 'zoomIn', '-': 'zoomOut', 0: 'zoomReset',
+  Escape: 'escape',
+}
+
+/** Match lecture shortcuts while leaving browser commands and text composition alone. */
+export function keyboardAction(event: KeyInput): KeyAction | undefined {
+  if (event.isComposing || event.altKey || event.ctrlKey) return
+  if (event.metaKey) {
+    if (event.shiftKey) return
+    if (event.key === 'ArrowUp') return 'first'
+    if (event.key === 'ArrowDown') return 'last'
+    return
+  }
+  if (event.key === ' ') return event.shiftKey ? 'backward' : 'forward'
+  if (event.key === 'ArrowRight') return event.shiftKey ? 'overForward' : 'forward'
+  if (event.key === 'ArrowLeft') return event.shiftKey ? 'overBackward' : 'backward'
+  return Object.hasOwn(keyBindings, event.key) ? keyBindings[event.key] : undefined
+}
+
 /** Global keyboard shortcuts; any action left out is ignored. */
 export function useKeyboard(actions: Partial<Actions>, onEscape: () => void) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.altKey || event.ctrlKey || event.metaKey) return
-      if ((event.target as Element | null)?.closest?.('input, textarea, select, [contenteditable]')) return
-      const { key, shiftKey } = event
-      const handler = ({
-        ArrowRight: shiftKey ? actions.overForward : actions.forward,
-        ArrowLeft: shiftKey ? actions.overBackward : actions.backward,
-        l: actions.forward,
-        h: actions.backward,
-        j: actions.overForward,
-        k: actions.overBackward,
-        PageDown: actions.overForward,  // Presentation clickers
-        PageUp: actions.overBackward,
-        u: actions.out,
-        Home: actions.first,
-        End: actions.last,
-        A: actions.toggleAnimate,
-        R: actions.toggleRaw,
-        E: actions.toggleEnv,
-        e: actions.toggleLineEnv,
-        N: actions.toggleNotes,
-        O: actions.toggleOutline,
-        o: actions.toggleOutline,
-        T: actions.toggleTheme,
-        t: actions.toggleTheme,
-        g: actions.home,
-        '?': actions.toggleHelp,
-        p: actions.togglePresent,
-        P: actions.togglePresent,
-        s: actions.openSpeaker,
-        S: actions.openSpeaker,
-        '+': actions.zoomIn,
-        '=': actions.zoomIn,
-        '-': actions.zoomOut,
-        0: actions.zoomReset,
-        Escape: onEscape,
-      } as Record<string, (() => void) | undefined>)[key]
+      if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]')) return
+      const action = keyboardAction(event)
+      const handler = action === 'escape' ? onEscape : action ? actions[action] : undefined
       if (!handler) return
       event.preventDefault()
       handler()

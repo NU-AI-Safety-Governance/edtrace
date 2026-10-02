@@ -763,6 +763,7 @@ a { color: var(--accent-text); text-underline-offset: 0.18em; text-decoration-th
 .dialog h2 { margin: 0; font-size: 1.05rem; }
 .dialog h3 { margin: 0.75rem 0 0.4rem; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .shortcut-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 0 2rem; }
+.shortcut-groups > section:first-child { grid-row: span 2; }
 .shortcuts { margin: 0; }
 .shortcut { display: grid; grid-template-columns: 7.5rem 1fr; align-items: center; gap: 0.75rem; padding: 0.3rem 0; font-size: 0.85rem; }
 .shortcut dt { display: flex; gap: 0.25rem; flex-wrap: wrap; }

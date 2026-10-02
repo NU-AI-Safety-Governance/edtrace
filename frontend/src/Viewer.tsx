@@ -302,8 +302,8 @@ function TopBar({ title, path, stepIndex, numSteps, outline, actions, goToStep, 
     <header className="topbar">
       <div className="topbar-row">
         <div className="topbar-group topbar-left">
-          <IconButton label="Outline" shortcut="O" pressed={flags.outlineOpen} onClick={actions.toggleOutline}><PanelLeft /></IconButton>
-          <IconButton label="All lectures" shortcut="G" onClick={actions.home}><House /></IconButton>
+          <IconButton label="Outline" shortcut="o" pressed={flags.outlineOpen} onClick={actions.toggleOutline}><PanelLeft /></IconButton>
+          <IconButton label="All lectures" shortcut="g" onClick={actions.home}><House /></IconButton>
           <div className="topbar-title">
             <span className="topbar-title-text">{title}</span>
             <span className="topbar-subtitle">{path}</span>
@@ -311,28 +311,28 @@ function TopBar({ title, path, stepIndex, numSteps, outline, actions, goToStep, 
         </div>
 
         <div className="topbar-group topbar-nav">
-          <IconButton label="Step back over" shortcut="⇧←" onClick={actions.overBackward}><ChevronsLeft /></IconButton>
-          <IconButton label="Step back" shortcut="←" onClick={actions.backward}><ArrowLeft /></IconButton>
+          <IconButton label="Step back over" shortcut="↑" onClick={actions.overBackward}><ChevronsLeft /></IconButton>
+          <IconButton label="Step back" shortcut="⇧ Space / ←" onClick={actions.backward}><ArrowLeft /></IconButton>
           <span className="step-counter" title="Current step / total steps">
             <span className="step-current">{stepIndex === null ? '—' : stepIndex + 1}</span>
             <span className="step-total">/ {numSteps}</span>
           </span>
-          <IconButton label="Step forward" shortcut="→" onClick={actions.forward}><ArrowRight /></IconButton>
-          <IconButton label="Step over" shortcut="⇧→" onClick={actions.overForward}><ChevronsRight /></IconButton>
-          <IconButton label="Step out of function" shortcut="U" onClick={actions.out}><CornerLeftUp /></IconButton>
+          <IconButton label="Step forward" shortcut="Space / →" onClick={actions.forward}><ArrowRight /></IconButton>
+          <IconButton label="Step over" shortcut="↓" onClick={actions.overForward}><ChevronsRight /></IconButton>
+          <IconButton label="Step out of function" shortcut="u" onClick={actions.out}><CornerLeftUp /></IconButton>
         </div>
 
         <div className="topbar-group topbar-right">
-          <IconButton label="Reveal lines as you step" shortcut="A" pressed={flags.animateMode} onClick={actions.toggleAnimate}><Clapperboard /></IconButton>
-          <IconButton label="Raw code" shortcut="R" pressed={flags.rawMode} onClick={actions.toggleRaw}><Code /></IconButton>
+          <IconButton label="Reveal lines as you step" shortcut="a" pressed={flags.animateMode} onClick={actions.toggleAnimate}><Clapperboard /></IconButton>
+          <IconButton label="Raw code" shortcut="r" pressed={flags.rawMode} onClick={actions.toggleRaw}><Code /></IconButton>
           <IconButton label="Inline values" shortcut="e" pressed={flags.showLineEnv} onClick={actions.toggleLineEnv}><Braces /></IconButton>
-          <IconButton label="Speaker notes" shortcut="N" pressed={flags.showNotes} onClick={actions.toggleNotes}><StickyNote /></IconButton>
-          <IconButton label="Variables panel" shortcut="E" pressed={flags.showEnv} onClick={actions.toggleEnv}><PanelRight /></IconButton>
+          <IconButton label="Speaker notes" shortcut="n" pressed={flags.showNotes} onClick={actions.toggleNotes}><StickyNote /></IconButton>
+          <IconButton label="Variables panel" shortcut="v" pressed={flags.showEnv} onClick={actions.toggleEnv}><PanelRight /></IconButton>
           <span className="topbar-divider" />
-          <IconButton label="Present" shortcut="P" pressed={flags.presenting} onClick={actions.togglePresent}><Presentation /></IconButton>
-          <IconButton label="Speaker view (new window)" shortcut="S" onClick={actions.openSpeaker}><MonitorSpeaker /></IconButton>
-          <IconButton label={theme === 'dark' ? 'Light mode' : 'Dark mode'} shortcut="T" onClick={actions.toggleTheme}>{theme === 'dark' ? <Sun /> : <Moon />}</IconButton>
-          <IconButton label="Keyboard shortcuts" shortcut="?" pressed={flags.helpOpen} onClick={actions.toggleHelp}><Keyboard /></IconButton>
+          <IconButton label="Present" shortcut="p" pressed={flags.presenting} onClick={actions.togglePresent}><Presentation /></IconButton>
+          <IconButton label="Speaker view (new window)" shortcut="s" onClick={actions.openSpeaker}><MonitorSpeaker /></IconButton>
+          <IconButton label={theme === 'dark' ? 'Light mode' : 'Dark mode'} shortcut="t" onClick={actions.toggleTheme}>{theme === 'dark' ? <Sun /> : <Moon />}</IconButton>
+          <IconButton label="Keyboard shortcuts" shortcut="/" pressed={flags.helpOpen} onClick={actions.toggleHelp}><Keyboard /></IconButton>
         </div>
       </div>
       <Scrubber stepIndex={stepIndex} numSteps={numSteps} outline={outline} goToStep={goToStep} />

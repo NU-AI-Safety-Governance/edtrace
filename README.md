@@ -75,17 +75,22 @@ Directives go in comments:
 
 | Key | Action |
 |-----|--------|
-| `→` / `l`, `←` / `h` | Step forward / back |
-| `⇧→` / `j` / `PgDn`, `⇧←` / `k` / `PgUp` | Step over / back over |
+| `Space` / `→`, `Shift+Space` / `←` | Step forward / back |
+| `↓`, `↑` | Step over / back over |
 | `u` | Step out of the current function |
-| `Home`, `End` | First / last step |
-| `A` | Reveal lines as you step (presenting) |
-| `R` | Raw code |
-| `e`, `E` | Inline values, variables panel |
-| `N` | Speaker notes |
+| `⌘↑` / `Home`, `⌘↓` / `End` | First / last step |
+| `a` | Reveal lines as you step (presenting) |
+| `r` | Raw code |
+| `e`, `v` | Inline values, variables panel |
+| `n` | Speaker notes |
 | `o`, `t`, `+`/`-`/`0` | Outline, theme, zoom |
-| `P`, `S` | Present (fullscreen), speaker view (synced second window) |
-| `?` | All shortcuts |
+| `p`, `s` | Present (fullscreen), speaker view (synced second window) |
+| `/` / `?` | All shortcuts |
+
+Letter shortcuts do not need Shift. `⌘` is Command on a Mac. Existing `h/j/k/l`,
+Shift+arrows, uppercase view toggles, and `PgUp`/`PgDn` clickers remain supported.
+Browser commands such as `⌘R` keep their normal behavior, and lecture shortcuts
+are disabled while typing in a field.
 
 Every position is a URL (`?trace=hello&step=12`), so you can link to any step.
 

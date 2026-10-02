@@ -2,27 +2,29 @@ import { X } from 'lucide-react'
 
 const SHORTCUTS: [string, [string[], string][]][] = [
   ['Navigate', [
-    [['→', 'l'], 'Step forward (into functions)'],
-    [['←', 'h'], 'Step backward'],
-    [['⇧→', 'j', 'PgDn'], 'Step over (stay in this function)'],
-    [['⇧←', 'k', 'PgUp'], 'Step back over'],
+    [['Space', '→'], 'Step forward (into functions)'],
+    [['⇧ Space', '←'], 'Step backward'],
+    [['↓'], 'Step over (stay in this function)'],
+    [['↑'], 'Step back over'],
     [['u'], 'Step out of the current function'],
-    [['Home', 'End'], 'First / last step'],
+    [['⌘↑', 'Home'], 'First step'],
+    [['⌘↓', 'End'], 'Last step'],
     [['g'], 'All lectures'],
   ]],
   ['Present', [
-    [['P'], 'Present: fullscreen, reveal as you step (Esc to leave)'],
-    [['S'], 'Speaker view in a new window (notes, next step, timer)'],
+    [['p'], 'Present: fullscreen, reveal as you step (Esc to leave)'],
+    [['s'], 'Speaker view in a new window (notes, next step, timer)'],
   ]],
   ['View', [
-    [['A'], 'Reveal lines as you step (presenting)'],
-    [['R'], 'Raw code instead of rendered text'],
+    [['a'], 'Reveal lines as you step (presenting)'],
+    [['r'], 'Raw code instead of rendered text'],
     [['e'], 'Inspected values inline'],
-    [['E'], 'Variables panel'],
-    [['N'], 'Speaker notes'],
+    [['v'], 'Variables panel'],
+    [['n'], 'Speaker notes'],
     [['o'], 'Outline'],
     [['+', '−', '0'], 'Zoom in / out / reset'],
     [['t'], 'Light / dark theme'],
+    [['/', '?'], 'Keyboard shortcuts'],
   ]],
 ]
 
@@ -49,7 +51,7 @@ export function HelpDialog({ onClose }: { onClose: () => void }) {
             </section>
           ))}
         </div>
-        <p className="dialog-footnote">Click a line number to jump to the step that runs it. Every position has its own URL.</p>
+        <p className="dialog-footnote">Letter shortcuts work without Shift. On a Mac, ⌘ is Command and ⇧ is Shift. Shift+arrows, h/j/k/l, and presentation clickers still work. Shortcuts pause while typing in a field.</p>
       </div>
     </div>
   )
