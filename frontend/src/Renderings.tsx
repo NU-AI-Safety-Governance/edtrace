@@ -177,7 +177,10 @@ function PlotlyFigure({ figure, style }: { figure: PlotlyData; style: Style }) {
 
   useEffect(() => {
     const element = ref.current
-    return () => { if (element) import('plotly.js-dist-min').then(({ default: Plotly }) => Plotly.purge(element)) }
+    // Purge only once the figure has really left the page (React's dev double-mount keeps it, and purging would blank it)
+    return () => {
+      if (element) import('plotly.js-dist-min').then(({ default: Plotly }) => { if (!element.isConnected) Plotly.purge(element) })
+    }
   }, [])
 
   return <div className="plotly" ref={ref} style={style} />
