@@ -686,7 +686,13 @@ a { color: var(--accent-text); text-underline-offset: 0.18em; text-decoration-th
   transition: box-shadow 0.15s, transform 0.15s;
 }
 .figure:hover .figure-media { box-shadow: var(--shadow); }
-.plot { max-width: 100%; overflow-x: auto; }
+/* Plots scale up to the column width (text included), so they read on a projector */
+.plot { width: 100%; }
+.plot .vega-embed { display: block; width: 100%; }
+.plot .vega-embed svg.marks { display: block; width: 100%; height: auto; }
+/* SVG diagrams are drawn for a white page: in dark mode flip their lightness but keep their hues.
+   An image opts out with style={"filter": "none"}. */
+:root[data-theme='dark'] .figure-media[src$='.svg'] { filter: invert(1) hue-rotate(180deg); border-color: transparent; box-shadow: none; }
 .plot-loading { padding: 2rem; color: var(--muted); font-size: 0.85em; }
 
 /* ==========================================================================

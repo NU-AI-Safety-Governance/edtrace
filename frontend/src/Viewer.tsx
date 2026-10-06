@@ -171,16 +171,23 @@ function LoadedViewer({ trace, tracePath, params, theme, toggleTheme }: ViewerPr
 
   // Keep the current line in view
   useLayoutEffect(() => {
-    const container = scrollRef.current
-    const element = container?.querySelector('[data-current]')
-    if (!container || !element) return
-    const box = element.getBoundingClientRect()
-    const view = container.getBoundingClientRect()
-    const margin = Math.min(120, view.height / 4)
-    if (box.top >= view.top + margin && box.bottom <= view.bottom - margin) return
-    const distance = Math.min(Math.abs(box.top - view.top), Math.abs(box.bottom - view.bottom))
-    element.scrollIntoView({ block: 'center', behavior: distance < view.height ? 'smooth' : 'instant' })
+    if (scrollRef.current) scrollToCurrent(scrollRef.current)
   }, [path, currentLine, stepIndex])
+
+  // Presenting and zooming reflow the page (and hide unreached lines), so find the current line again
+  useLayoutEffect(() => {
+    if (scrollRef.current) scrollToCurrent(scrollRef.current, 'instant')
+  }, [presenting, zoom])
+
+  // While presenting, also follow layout changes: going fullscreen, plots finishing loading
+  useEffect(() => {
+    const container = scrollRef.current
+    if (!presenting || !container) return
+    const observer = new ResizeObserver(() => scrollToCurrent(container, 'instant'))
+    observer.observe(container)
+    if (container.firstElementChild) observer.observe(container.firstElementChild)
+    return () => observer.disconnect()
+  }, [presenting])
 
   const activeOutline = stepIndex === null ? -1 : index.outline.findLastIndex((entry) => entry.step <= stepIndex)
 
@@ -410,6 +417,18 @@ function Scrubber({ stepIndex, numSteps, outline, goToStep }: ScrubberProps) {
       )}
     </div>
   )
+}
+
+/** Scroll the current line to the middle of the view, unless it's already comfortably visible. */
+function scrollToCurrent(container: HTMLElement, behavior?: ScrollBehavior) {
+  const element = container.querySelector('[data-current]')
+  if (!element) return
+  const box = element.getBoundingClientRect()
+  const view = container.getBoundingClientRect()
+  const margin = Math.min(120, view.height / 4)
+  if (box.top >= view.top + margin && box.bottom <= view.bottom - margin) return
+  const distance = Math.min(Math.abs(box.top - view.top), Math.abs(box.bottom - view.bottom))
+  element.scrollIntoView({ block: 'center', behavior: behavior ?? (distance < view.height ? 'smooth' : 'instant') })
 }
 
 /** Enter presenting (fullscreen, reveal as you step, no side panels) or leave it. */
