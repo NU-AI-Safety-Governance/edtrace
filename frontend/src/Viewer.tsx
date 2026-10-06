@@ -4,7 +4,7 @@ import {
   House, Keyboard, MonitorSpeaker, Moon, PanelLeft, PanelRight, Presentation, StickyNote, Sun,
 } from 'lucide-react'
 import { useKeyboard, type Actions } from './keyboard'
-import { useLineModels, type LineModel } from './lines'
+import { renderingsAt, useLineModels, type LineModel } from './lines'
 import { Inspector, Outline } from './Panels'
 import { HelpDialog, Lightbox } from './Overlays'
 import { SITE_TITLE, ViewerContext, type Theme } from './context'
@@ -219,6 +219,7 @@ function LoadedViewer({ trace, tracePath, params, theme, toggleTheme }: ViewerPr
               <Line
                 key={line.number}
                 line={line}
+                renderings={line.frames ? renderingsAt(line, stepIndex) : line.renderings}
                 isCurrent={line.number === currentLine}
                 cloaked={reveal && stepIndex !== null && (index.firstVisible.get(locationKey(path, line.number)) ?? Infinity) > stepIndex}
                 env={lineEnvs?.get(line.number)}
@@ -240,6 +241,8 @@ function LoadedViewer({ trace, tracePath, params, theme, toggleTheme }: ViewerPr
 
 interface LineProps {
   line: LineModel
+  /** The line's renderings at the current step (they change for lines with frames) */
+  renderings: LineModel['renderings']
   isCurrent: boolean
   cloaked: boolean
   env: Env | undefined
@@ -247,7 +250,7 @@ interface LineProps {
   onGutterClick: (lineNumber: number) => void
 }
 
-const Line = memo(function Line({ line, isCurrent, cloaked, env, showNotes, onGutterClick }: LineProps) {
+const Line = memo(function Line({ line, renderings, isCurrent, cloaked, env, showNotes, onGutterClick }: LineProps) {
   const classes = ['line', `line-${line.kind}`]
   if (line.inCode) classes.push('in-code')
   if (line.blockStart) classes.push('block-start')
@@ -268,7 +271,7 @@ const Line = memo(function Line({ line, isCurrent, cloaked, env, showNotes, onGu
       </button>
       <div className="line-main">
         {line.kind === 'prose' && (
-          <div className="prose"><LineRenderings renderings={line.renderings} /></div>
+          <div className="prose"><LineRenderings renderings={renderings} /></div>
         )}
         {(line.kind === 'code' || line.kind === 'blank') && (
           <code className="code-text" dangerouslySetInnerHTML={{ __html: line.html || '​' }} />

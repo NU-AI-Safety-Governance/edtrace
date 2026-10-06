@@ -15,11 +15,19 @@ export interface OutlineEntry {
 export interface TraceIndex {
   /** location -> renderings of the last step there that produced any */
   renderings: Map<string, Rendering[]>
+  /** location -> every step there that produced renderings, in order (a line run in a loop has several) */
+  frames: Map<string, Frame[]>
   /** location -> step at which the line is revealed (animate mode) */
   firstVisible: Map<string, number>
   outline: OutlineEntry[]
   title: string | null
   mainPath: string
+}
+
+/** What one line rendered at one step */
+export interface Frame {
+  step: number
+  renderings: Rendering[]
 }
 
 export const last = <T,>(xs: T[]): T => xs[xs.length - 1]
@@ -98,6 +106,7 @@ const headingOf = (rendering: Rendering) =>
 /** One-time pass over the trace computing everything that doesn't depend on the current step. */
 export function indexTrace(trace: Trace): TraceIndex {
   const renderings = new Map<string, Rendering[]>()
+  const frames = new Map<string, Frame[]>()
   const firstVisible = new Map<string, number>()
   const headings: OutlineEntry[] = []
   const functions: OutlineEntry[] = []
@@ -111,6 +120,9 @@ export function indexTrace(trace: Trace): TraceIndex {
 
     if (step.renderings.length > 0) {
       renderings.set(key, step.renderings)
+      let list = frames.get(key)
+      if (!list) frames.set(key, list = [])
+      list.push({ step: stepIndex, renderings: step.renderings })
       const heading = step.renderings.map(headingOf).find((match) => match !== null)
       if (heading && !seen.has(key)) {
         seen.add(key)
@@ -140,7 +152,7 @@ export function indexTrace(trace: Trace): TraceIndex {
   const titleHeading = headings.find((h) => h.level <= 2)
   const mainPath = trace.steps.length > 0 ? topOf(trace.steps[0]).path : Object.keys(trace.files)[0]
 
-  return { renderings, firstVisible, outline, title: titleHeading?.text ?? null, mainPath }
+  return { renderings, frames, firstVisible, outline, title: titleHeading?.text ?? null, mainPath }
 }
 
 /** Variables (of the current function call) at `stepIndex`. */

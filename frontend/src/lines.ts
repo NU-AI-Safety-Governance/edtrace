@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { dedentHtml, highlightLines, indentWidth, statementEnd, stripDirectives } from './code'
-import { locationKey, type TraceIndex } from './trace'
+import { locationKey, type Frame, type TraceIndex } from './trace'
 import type { Rendering, Trace } from './types'
 
 /**
@@ -14,6 +14,8 @@ export interface LineModel {
   html: string
   indent: number
   renderings: Rendering[]
+  /** Renderings over time, when the line ran (and rendered) at more than one step, e.g., a plot in a loop */
+  frames?: Frame[]
   notes: string[]
   /** Part of a code block (code, or a blank line between code) */
   inCode?: boolean
@@ -52,6 +54,7 @@ export function useLineModels(trace: Trace, index: TraceIndex, path: string, raw
         for (let n = number + 1; n <= continuationUntil + 1; n++) renderings.push(...index.renderings.get(locationKey(path, n)) ?? [])
       }
       const shown = renderings.filter((r) => r.type !== 'note')
+      const lineFrames = rawMode ? undefined : index.frames.get(locationKey(path, number))
       const kind = shown.length > 0 ? 'prose' : renderings.length > 0 ? 'note' : text.trim() === '' ? 'blank' : 'code'
       lines.push({
         number,
@@ -59,6 +62,9 @@ export function useLineModels(trace: Trace, index: TraceIndex, path: string, raw
         html: html[i],
         indent: indentWidth(source[i]),
         renderings: shown,
+        frames: lineFrames && lineFrames.length > 1
+          ? lineFrames.map((f) => ({ step: f.step, renderings: f.renderings.filter((r) => r.type !== 'note') }))
+          : undefined,
         notes: renderings.filter((r) => r.type === 'note').map((r) => String(r.data)),
       })
     })
@@ -105,4 +111,13 @@ export function useLineModels(trace: Trace, index: TraceIndex, path: string, raw
       },
     }
   }, [trace, index, path, rawMode])
+}
+
+/**
+ * What a line shows at `step`: its latest frame so far, so a plot redrawn in a loop
+ * animates as you step. Before the line has run, it shows its final renderings.
+ */
+export function renderingsAt(line: LineModel, step: number | null): Rendering[] {
+  if (!line.frames || step === null) return line.renderings
+  return line.frames.findLast((frame) => frame.step <= step)?.renderings ?? line.renderings
 }
