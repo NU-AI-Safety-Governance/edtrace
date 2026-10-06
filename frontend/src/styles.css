@@ -693,6 +693,7 @@ a { color: var(--accent-text); text-underline-offset: 0.18em; text-decoration-th
 /* SVG diagrams are drawn for a white page: in dark mode flip their lightness but keep their hues.
    An image opts out with style={"filter": "none"}. */
 :root[data-theme='dark'] .figure-media[src$='.svg'] { filter: invert(1) hue-rotate(180deg); border-color: transparent; box-shadow: none; }
+.plotly { width: 100%; min-height: 420px; }
 .plot-loading { padding: 2rem; color: var(--muted); font-size: 0.85em; }
 
 /* ==========================================================================

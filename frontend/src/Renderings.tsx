@@ -1,4 +1,4 @@
-import { lazy, Suspense, useContext, useState, type CSSProperties, type ReactNode } from 'react'
+import { lazy, Suspense, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { CornerDownRight, Info, Lightbulb, MessageSquareWarning, OctagonAlert, TriangleAlert, type LucideIcon } from 'lucide-react'
 import { ViewerContext } from './context'
 import { blockMarkdown, classifyLine, inlineMarkdown, type CalloutVariant } from './markdown'
@@ -7,7 +7,7 @@ import type { CardData, CodeLocation, Reference, Rendering as RenderingData } fr
 // Vega is big, so only load it for lectures that actually have plots
 const VegaEmbed = lazy(() => import('react-vega').then((module) => ({ default: module.VegaEmbed })))
 
-const MEDIA_TYPES = new Set(['image', 'video', 'plot'])
+const MEDIA_TYPES = new Set(['image', 'video', 'plot', 'plotly'])
 
 const CALLOUTS: Record<CalloutVariant, { icon: LucideIcon; label: string }> = {
   note: { icon: Info, label: 'Note' },
@@ -100,6 +100,8 @@ function Rendering({ rendering }: { rendering: RenderingData }) {
       return <Card card={data as CardData} style={style} />
     case 'plot':
       return <Plot spec={data as object} style={style} />
+    case 'plotly':
+      return <PlotlyFigure figure={data as PlotlyData} style={style} />
     case 'link':
       if (rendering.internal_link) return <SourceLink location={rendering.internal_link} label={data as string | null} style={style} />
       if (rendering.external_link) return <Citation reference={rendering.external_link} label={data as string | null} style={style} />
@@ -146,6 +148,59 @@ function Plot({ spec, style }: { spec: object; style: Style }) {
       </Suspense>
     </div>
   )
+}
+
+interface PlotlyData {
+  data?: object[]
+  layout?: Record<string, unknown>
+  config?: Record<string, unknown>
+}
+
+/**
+ * A Plotly figure (e.g., a 3D surface). Plotly is several MB, so it loads only when a
+ * lecture uses it. Redrawing (stepping through frames, switching theme) keeps the camera.
+ */
+function PlotlyFigure({ figure, style }: { figure: PlotlyData; style: Style }) {
+  const { theme } = useContext(ViewerContext)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    import('plotly.js-dist-min').then(({ default: Plotly }) => {
+      if (cancelled || !ref.current) return
+      const layout = { uirevision: 'keep', ...figure.layout, template: plotlyTemplate() }
+      const config = { displaylogo: false, responsive: true, scrollZoom: false, ...figure.config }
+      Plotly.react(ref.current, (figure.data ?? []) as never, layout as never, config as never)
+    })
+    return () => { cancelled = true }
+  }, [figure, theme])
+
+  useEffect(() => {
+    const element = ref.current
+    return () => { if (element) import('plotly.js-dist-min').then(({ default: Plotly }) => Plotly.purge(element)) }
+  }, [])
+
+  return <div className="plotly" ref={ref} style={style} />
+}
+
+/** Plotly defaults that follow the viewer's theme (fonts, text and grid colors, transparent backgrounds). */
+function plotlyTemplate() {
+  const css = getComputedStyle(document.documentElement)
+  const text = css.getPropertyValue('--text').trim()
+  const grid = css.getPropertyValue('--border').trim()
+  const axis = { color: text, gridcolor: grid, zerolinecolor: grid }
+  const sceneAxis = { ...axis, backgroundcolor: 'rgba(0,0,0,0)', showbackground: false }
+  return {
+    layout: {
+      font: { family: 'Poppins, system-ui, sans-serif', color: text },
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      xaxis: axis,
+      yaxis: axis,
+      scene: { xaxis: sceneAxis, yaxis: sceneAxis, zaxis: sceneAxis },
+      legend: { bgcolor: 'rgba(0,0,0,0)' },
+    },
+  }
 }
 
 function SourceLink({ location, label, style }: { location: CodeLocation; label: string | null; style: Style }) {

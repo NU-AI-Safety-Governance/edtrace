@@ -29,6 +29,7 @@ class Rendering:
     - video: a video (data = url)
     - link: an link to internal code or external URL
     - plot: a Vega-Lite spec
+    - plotly: a Plotly figure (data = {data, layout, config}), e.g., for 3D surfaces
     - card: a card (data = {title, body, eyebrow, tags, sources, caveat})
     - note: speaker notes
     """
@@ -132,6 +133,14 @@ def link(arg: type | Reference | str | None = None, style: dict | None = None, *
 def plot(spec: any):
     """Show a plot given `spec`."""
     _current_renderings.append(Rendering(type="plot", data=spec))
+
+
+def plotly(figure: any, style: dict | None = None):
+    """Show a Plotly figure: a dict with `data` (traces), and optionally `layout` and `config`,
+    or a plotly.graph_objects.Figure. Use it for what Vega-Lite can't draw, such as 3D surfaces."""
+    if hasattr(figure, "to_plotly_json"):  # A plotly Figure
+        figure = figure.to_plotly_json()
+    _current_renderings.append(Rendering(type="plotly", data=figure, style=style))
 
 
 def card(

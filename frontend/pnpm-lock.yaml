@@ -29,6 +29,9 @@ importers:
       marked-katex-extension:
         specifier: ^5.1.13
         version: 5.1.13(katex@0.16.47)(marked@18.0.14)
+      plotly.js-dist-min:
+        specifier: ^4.1.2
+        version: 4.1.2
       react:
         specifier: ^19.3.0
         version: 19.3.0
@@ -54,6 +57,9 @@ importers:
       '@types/node':
         specifier: ^26.6.3
         version: 26.6.3
+      '@types/plotly.js-dist-min':
+        specifier: ^2.3.4
+        version: 2.3.4
       '@types/react':
         specifier: ^19.3.0
         version: 19.3.0
@@ -366,6 +372,12 @@ packages:
 
   '@types/node@26.6.3':
     resolution: {integrity: sha512-dsqMQQoeTLqu9wynDD00q573mNzso3IdQOAfHRJqLCcmCFPoGo9A1bDpUcv/9tnKpErQWv9uKeGfl37EIS02Yg==}
+
+  '@types/plotly.js-dist-min@2.3.4':
+    resolution: {integrity: sha512-ISwLFV6Zs/v3DkaRFLyk2rvYAfVdnYP2VVVy7h+fBDWw52sn7sMUzytkWiN4M75uxr1uz1uiBioePTDpAfoFIg==}
+
+  '@types/plotly.js@3.0.14':
+    resolution: {integrity: sha512-3JZH20UBXQ8rZFPeV40fKinx5Le0T2cuz6kM8LEYkkAuDrljzezlwvZuXnXQhyBost7YwgKxEDg7SVTIBbA6eg==}
 
   '@types/react-dom@19.3.0':
     resolution: {integrity: sha512-ZI7bU42mZXXKHn/qNLEw2IrbiINU7X5+vfgdixBHkCNpYWXjKgfQ/P+uyGb5CjOLB9UcnTeg3rylQtV2hym44Q==}
@@ -978,6 +990,9 @@ packages:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
 
+  plotly.js-dist-min@4.1.2:
+    resolution: {integrity: sha512-VSmS9KVNun16S8qFYYp9LlL/XBby4ueeGqB+K9AqRCVsup8dSpGULap4UyR1f2mz4pV3qjWp1sR5chwLgIKPoQ==}
+
   postcss@8.5.28:
     resolution: {integrity: sha512-RRuzqDtt5Y9h3quz5hWhK+TPnsmVs6WwSU6LkJMeY4HstUEDuYTG8UJSdawMRzmzAtV+KEoG8N3Qg2qLy5vM/A==}
     engines: {node: ^10 || ^12 || >=14}
@@ -1562,6 +1577,12 @@ snapshots:
     dependencies:
       undici-types: 8.9.0
 
+  '@types/plotly.js-dist-min@2.3.4':
+    dependencies:
+      '@types/plotly.js': 3.0.14
+
+  '@types/plotly.js@3.0.14': {}
+
   '@types/react-dom@19.3.0(@types/react@19.3.0)':
     dependencies:
       '@types/react': 19.3.0
@@ -2116,6 +2137,8 @@ snapshots:
   picocolors@1.1.1: {}
 
   picomatch@4.0.7: {}
+
+  plotly.js-dist-min@4.1.2: {}
 
   postcss@8.5.28:
     dependencies:

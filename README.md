@@ -61,6 +61,7 @@ you ran it from (override with `EDTRACE_CONTENT_DIR`).
 | `link(url)`, `link(Reference(...))` | A citation chip with details on hover (arXiv links are looked up) |
 | `link(function)` | A link that jumps to the function's definition |
 | `plot(vega_lite_spec)` | A Vega-Lite chart |
+| `plotly(figure)` | A Plotly figure (`{data, layout, config}` or a `go.Figure`), e.g., a 3D surface you can rotate |
 | `card(title, body=..., eyebrow=..., tags=[...], sources=[...], caveat=...)` | A card, e.g. a case study with cited sources |
 | `note("...")` | Speaker notes (shown in the speaker view, or inline with N) |
 
@@ -70,6 +71,8 @@ Directives go in comments:
 - `# @clear x` stops showing `x`
 - `# @stepover` doesn't trace into calls on this line
 - `# @hide` hides the line
+
+A line that renders at several steps (e.g., `plot(...)` inside a loop) shows its latest rendering as of the current step, so stepping animates it.
 
 ## Viewer shortcuts
 
