@@ -142,7 +142,7 @@ function Plot({ spec, style }: { spec: object; style: Style }) {
   return (
     <div className="plot" style={style}>
       <Suspense fallback={<div className="plot-loading">Loading plot…</div>}>
-        <VegaEmbed spec={spec as never} options={{ actions: false, theme: theme === 'dark' ? 'dark' : undefined }} />
+        <VegaEmbed spec={spec as never} options={{ actions: false, theme: theme === 'dark' ? 'dark' : undefined, config: { font: 'Poppins, system-ui, sans-serif' } }} />
       </Suspense>
     </div>
   )

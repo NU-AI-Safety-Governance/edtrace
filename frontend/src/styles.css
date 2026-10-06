@@ -3,7 +3,7 @@
    ========================================================================== */
 
 :root {
-  --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
   --code-size: 0.84em;
   /* Width of one space of code, so prose and code indent identically */
@@ -514,10 +514,10 @@ a { color: var(--accent-text); text-underline-offset: 0.18em; text-decoration-th
   letter-spacing: -0.018em;
   line-height: 1.25;
 }
-.prose-h1 { font-size: 2.05em; font-weight: 750; padding: 0.6em 0 0.3em; letter-spacing: -0.025em; }
-.prose-h2 { font-size: 1.5em; font-weight: 680; padding: 1.1em 0 0.3em; }
-.prose-h3 { font-size: 1.18em; font-weight: 650; padding: 0.9em 0 0.2em; }
-.prose-h4, .prose-h5, .prose-h6 { font-size: 1em; font-weight: 650; padding: 0.6em 0 0.1em; }
+.prose-h1 { font-size: 2.05em; font-weight: 700; padding: 0.6em 0 0.3em; letter-spacing: -0.025em; }
+.prose-h2 { font-size: 1.5em; font-weight: 600; padding: 1.1em 0 0.3em; }
+.prose-h3 { font-size: 1.18em; font-weight: 600; padding: 0.9em 0 0.2em; }
+.prose-h4, .prose-h5, .prose-h6 { font-size: 1em; font-weight: 600; padding: 0.6em 0 0.1em; }
 .line:first-child .prose-heading { padding-top: 0; }
 
 .prose-item {
@@ -580,7 +580,7 @@ a { color: var(--accent-text); text-underline-offset: 0.18em; text-decoration-th
 }
 .callout-body { margin-top: 0.15em; color: var(--text); }
 
-.markdown strong, .markdown-block strong { color: var(--text); font-weight: 650; }
+.markdown strong, .markdown-block strong { color: var(--text); font-weight: 600; }
 .markdown code, .markdown-block :not(pre) > code {
   padding: 0.12em 0.35em;
   border-radius: 5px;
@@ -626,7 +626,7 @@ a { color: var(--accent-text); text-underline-offset: 0.18em; text-decoration-th
   background: var(--accent-soft);
   color: var(--accent-text);
   font-size: 0.78em;
-  font-weight: 560;
+  font-weight: 500;
   line-height: 1.6;
   text-decoration: none;
   white-space: nowrap;
@@ -658,7 +658,7 @@ a { color: var(--accent-text); text-underline-offset: 0.18em; text-decoration-th
 .cite-card.align-right { left: auto; right: 0; }
 .cite:hover .cite-card { display: flex; animation: pop-in 0.15s ease-out 0.2s both; }
 @keyframes pop-in { from { opacity: 0; transform: translateY(-3px); } }
-.cite-title { color: var(--text); font-weight: 650; font-size: 0.92rem; line-height: 1.35; }
+.cite-title { color: var(--text); font-weight: 600; font-size: 0.92rem; line-height: 1.35; }
 .cite-meta { color: var(--muted); }
 .cite-org { margin-right: 0.4em; padding: 0 0.4em; border-radius: 4px; background: var(--hover); color: var(--text-2); font-weight: 600; }
 .cite-notes { color: var(--muted); font-style: italic; white-space: pre-line; }
@@ -790,7 +790,7 @@ kbd {
 
 .home { max-width: 46rem; margin: 0 auto; padding: 4.5rem 1.5rem; }
 .home-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
-.home h1 { margin: 0; font-size: 2rem; font-weight: 750; letter-spacing: -0.03em; }
+.home h1 { margin: 0; font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; }
 
 .lecture-list { display: grid; gap: 0.6rem; list-style: none; margin: 0 0 2rem; padding: 0; }
 .lecture-card {
@@ -807,7 +807,7 @@ kbd {
 }
 .lecture-card:hover { border-color: color-mix(in oklab, var(--accent) 40%, var(--border)); box-shadow: var(--shadow); transform: translateY(-1px); }
 .lecture-card-module { font-family: var(--font-mono); font-size: 0.72rem; color: var(--accent-text); }
-.lecture-card-title { font-size: 1.05rem; font-weight: 620; }
+.lecture-card-title { font-size: 1.05rem; font-weight: 600; }
 .lecture-card-meta { font-size: 0.8rem; color: var(--muted); }
 .lecture-card-arrow { position: absolute; right: 1.1rem; top: 50%; transform: translateY(-50%); color: var(--faint); transition: color 0.15s, transform 0.15s; }
 .lecture-card:hover .lecture-card-arrow { color: var(--accent-text); transform: translate(3px, -50%); }
@@ -900,7 +900,7 @@ kbd {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.card-title { margin: 0; color: var(--text); font-size: 1.08em; font-weight: 650; line-height: 1.35; }
+.card-title { margin: 0; color: var(--text); font-size: 1.08em; font-weight: 600; line-height: 1.35; }
 .card-body { margin-top: 0.35rem; color: var(--text-2); font-size: 0.95em; line-height: 1.6; }
 .card-body p { margin: 0.3em 0; }
 .card-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-top: 0.7rem; }
@@ -1006,7 +1006,7 @@ kbd {
 .speaker-panel-body { overflow: auto; padding: 0.4rem 0.9rem 0.9rem; font-size: 1.05rem; }
 .speaker-prose { padding: 0; }
 .speaker-code { display: block; padding: 0.6rem 0.8rem; border-radius: 8px; background: var(--code-bg); font-size: 0.9rem; white-space: pre-wrap; }
-.speaker-section { display: flex; flex-direction: column; gap: 0.35rem; font-size: 1.15rem; font-weight: 650; }
+.speaker-section { display: flex; flex-direction: column; gap: 0.35rem; font-size: 1.15rem; font-weight: 600; }
 .speaker-next-section { color: var(--muted); font-size: 0.85rem; font-weight: 500; }
 .speaker-empty { margin: 0; font-size: 0.9rem; }
 .speaker-notes-list { margin: 0; padding-left: 1.2rem; font-size: 1.1rem; line-height: 1.55; }
