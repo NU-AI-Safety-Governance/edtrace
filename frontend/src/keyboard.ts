@@ -13,7 +13,7 @@ type KeyAction = keyof Actions | 'escape'
 const keyBindings: Readonly<Partial<Record<string, KeyAction>>> = {
   ArrowUp: 'overBackward', ArrowDown: 'overForward',
   l: 'forward', h: 'backward', j: 'overForward', k: 'overBackward',
-  PageDown: 'overForward', PageUp: 'overBackward',  // Presentation clickers
+  PageDown: 'forward', PageUp: 'backward',  // Presentation clickers advance like Space
   u: 'out', Home: 'first', End: 'last',
   a: 'toggleAnimate', A: 'toggleAnimate',
   r: 'toggleRaw', R: 'toggleRaw',

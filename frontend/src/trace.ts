@@ -1,5 +1,6 @@
 /** Pure functions over a trace (see types.ts for the format). */
 
+import { statementEnd } from './code'
 import type { Env, Rendering, StackElement, Step, Trace } from './types'
 
 export interface OutlineEntry {
@@ -64,6 +65,37 @@ export function stepOverIndex(trace: Trace, stepIndex: number, direction: 1 | -1
     if (inSameFunction(other, stack) || isStrictAncestorOf(other, stack)) return i
     i += direction
   }
+  return i
+}
+
+const showsNothing = (step: Step) => step.renderings.length === 0 && Object.keys(step.env).length === 0
+
+/** Whether a step only adds speaker notes (so, with notes hidden, nothing changes on screen). */
+const isNoteOnly = (step: Step) =>
+  step.renderings.length > 0 && step.renderings.every((r) => r.type === 'note') && Object.keys(step.env).length === 0
+
+/**
+ * Whether a step only navigates between functions, showing nothing new: the line that
+ * calls a function (when the next step enters it), its def line, or a return statement.
+ */
+function isCallNavigation(trace: Trace, i: number): boolean {
+  const step = trace.steps[i]
+  if (!showsNothing(step)) return false
+  if (isFunctionCall(step.stack) || /^\s*return\b/.test(last(step.stack).code ?? '')) return true
+  const next = trace.steps[i + 1]
+  return next !== undefined && next.stack.length === step.stack.length + 1 && isFunctionCall(next.stack)
+}
+
+/**
+ * Move past steps that wouldn't change what's on screen: calling into a function (its call
+ * line and def line) and, when notes are hidden, steps that only add a note.
+ */
+export function skipQuietSteps(
+  trace: Trace, stepIndex: number, direction: 1 | -1, skip: { calls: boolean, notes: boolean },
+): number {
+  const quiet = (i: number) => (skip.calls && isCallNavigation(trace, i)) || (skip.notes && isNoteOnly(trace.steps[i]))
+  let i = stepIndex
+  while (i > 0 && i < trace.steps.length - 1 && quiet(i)) i += direction
   return i
 }
 
@@ -135,8 +167,12 @@ export function indexTrace(trace: Trace): TraceIndex {
       functions.push({ level: 3, text: `${functionName}()`, code: true, step: stepIndex, path, lineNumber })
     }
 
-    // Reveal this line and the lines above it, up to an unindented one (e.g., the def)
+    // Reveal this line's statement (all of its lines) and the lines above it, up to an unindented one (e.g., the def)
     const lines = linesOf(path)
+    for (let n = statementEnd(lines, lineNumber - 1) + 1; n > lineNumber; n--) {
+      const k = locationKey(path, n)
+      if (!firstVisible.has(k)) firstVisible.set(k, stepIndex)
+    }
     for (let n = lineNumber; n >= 1; n--) {
       const k = locationKey(path, n)
       if (firstVisible.has(k)) break

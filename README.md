@@ -91,7 +91,7 @@ A line that renders at several steps (e.g., `plot(...)` inside a loop) shows its
 | `/` / `?` | All shortcuts |
 
 Letter shortcuts do not need Shift. `⌘` is Command on a Mac. Existing `h/j/k/l`,
-Shift+arrows, uppercase view toggles, and `PgUp`/`PgDn` clickers remain supported.
+Shift+arrows and uppercase view toggles remain supported, and `PgDn`/`PgUp` clickers step like Space/Shift+Space.
 Browser commands such as `⌘R` keep their normal behavior, and lecture shortcuts
 are disabled while typing in a field.
 

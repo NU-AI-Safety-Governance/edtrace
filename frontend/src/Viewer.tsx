@@ -3,6 +3,7 @@ import {
   ArrowLeft, ArrowRight, Braces, ChevronsLeft, ChevronsRight, Clapperboard, Code, CornerLeftUp,
   House, Keyboard, MonitorSpeaker, Moon, PanelLeft, PanelRight, Presentation, StickyNote, Sun,
 } from 'lucide-react'
+import { statementEnd } from './code'
 import { useKeyboard, type Actions } from './keyboard'
 import { renderingsAt, useLineModels, type LineModel } from './lines'
 import { Inspector, Outline } from './Panels'
@@ -12,7 +13,7 @@ import { openSpeakerWindow, usePresenterSync } from './presenter'
 import { LineRenderings } from './Renderings'
 import SpeakerView from './Speaker'
 import {
-  findStepAtLine, indexTrace, lineEnvsFor, locationKey, resolvePosition, stepOutIndex, stepOverIndex, traceUrl,
+  findStepAtLine, indexTrace, lineEnvsFor, locationKey, resolvePosition, skipQuietSteps, stepOutIndex, stepOverIndex, traceUrl,
   type OutlineEntry,
 } from './trace'
 import type { Env, Trace } from './types'
@@ -110,29 +111,35 @@ function LoadedViewer({ trace, tracePath, params, theme, toggleTheme }: ViewerPr
   }, [numSteps])
   usePresenterSync(tracePath, stepIndex, goToStep)
 
-  const actions: Actions = useMemo(() => ({
-    forward: () => goToStep(baseStep + 1),
-    backward: () => goToStep(baseStep - 1),
-    overForward: () => goToStep(stepOverIndex(trace, baseStep, 1)),
-    overBackward: () => goToStep(stepOverIndex(trace, baseStep, -1)),
-    out: () => goToStep(stepOutIndex(trace, baseStep)),
-    first: () => goToStep(0),
-    last: () => goToStep(numSteps - 1),
-    toggleRaw: () => updateParams({ raw: !rawMode }),
-    toggleAnimate: () => updateParams({ animate: !animateMode }),
-    toggleEnv: () => updateParams({ hideEnv: showEnv }),
-    toggleNotes: () => updateParams({ showNotes: !showNotes }),
-    toggleLineEnv: () => updateParams({ showLineEnv: !showLineEnv }),
-    toggleOutline: () => setOutlineOpen((open) => !open),
-    toggleHelp: () => setHelpOpen((open) => !open),
-    zoomIn: () => setZoom((z) => Math.min(2, +(z + 0.1).toFixed(2))),
-    zoomOut: () => setZoom((z) => Math.max(0.7, +(z - 0.1).toFixed(2))),
-    zoomReset: () => setZoom(1),
-    home: () => updateParams({ trace: null, step: null, source: null, line: null }, { push: true }),
-    toggleTheme,
-    togglePresent: () => setPresenting(!presenting),
-    openSpeaker: () => openSpeakerWindow(tracePath),
-  }), [trace, tracePath, baseStep, numSteps, goToStep, rawMode, animateMode, presenting, showEnv, showNotes, showLineEnv, setOutlineOpen, setZoom, toggleTheme])
+  const actions: Actions = useMemo(() => {
+    // Stepping (Space, clickers) moves past steps that wouldn't change the screen: calling into a
+    // function, and hidden notes. Stepping over (↓ ↑) still stops on call lines, so you can step over them.
+    const step = (i: number, direction: 1 | -1) => skipQuietSteps(trace, i, direction, { calls: true, notes: !showNotes })
+    const over = (i: number, direction: 1 | -1) => skipQuietSteps(trace, i, direction, { calls: false, notes: !showNotes })
+    return {
+      forward: () => goToStep(step(baseStep + 1, 1)),
+      backward: () => goToStep(step(baseStep - 1, -1)),
+      overForward: () => goToStep(over(Math.min(stepOverIndex(trace, baseStep, 1), numSteps - 1), 1)),  // Past the end: the last step
+      overBackward: () => goToStep(over(Math.max(stepOverIndex(trace, baseStep, -1), 0), -1)),
+      out: () => goToStep(stepOutIndex(trace, baseStep)),
+      first: () => goToStep(0),
+      last: () => goToStep(numSteps - 1),
+      toggleRaw: () => updateParams({ raw: !rawMode }),
+      toggleAnimate: () => updateParams({ animate: !animateMode }),
+      toggleEnv: () => updateParams({ hideEnv: showEnv }),
+      toggleNotes: () => updateParams({ showNotes: !showNotes }),
+      toggleLineEnv: () => updateParams({ showLineEnv: !showLineEnv }),
+      toggleOutline: () => setOutlineOpen((open) => !open),
+      toggleHelp: () => setHelpOpen((open) => !open),
+      zoomIn: () => setZoom((z) => Math.min(2, +(z + 0.1).toFixed(2))),
+      zoomOut: () => setZoom((z) => Math.max(0.7, +(z - 0.1).toFixed(2))),
+      zoomReset: () => setZoom(1),
+      home: () => updateParams({ trace: null, step: null, source: null, line: null }, { push: true }),
+      toggleTheme,
+      togglePresent: () => setPresenting(!presenting),
+      openSpeaker: () => openSpeakerWindow(tracePath),
+    }
+  }, [trace, tracePath, baseStep, numSteps, goToStep, rawMode, animateMode, presenting, showEnv, showNotes, showLineEnv, setOutlineOpen, setZoom, toggleTheme])
 
   useKeyboard(actions, () => {
     if (zoomedImage) setZoomedImage(null)
@@ -164,6 +171,11 @@ function LoadedViewer({ trace, tracePath, params, theme, toggleTheme }: ViewerPr
 
   const { lines, displayLine } = useLineModels(trace, index, path, rawMode)
   const currentLine = displayLine(lineNumber, showNotes)
+  // A statement spanning several lines (e.g., a multi-line dict) is highlighted as a whole
+  const currentEnd = useMemo(
+    () => statementEnd((trace.files[path] ?? '').split('\n'), currentLine - 1) + 1,
+    [trace, path, currentLine],
+  )
   const lineEnvs = useMemo(
     () => showLineEnv ? lineEnvsFor(trace, path, reveal ? baseStep : numSteps - 1) : null,
     [showLineEnv, trace, path, reveal, baseStep, numSteps],
@@ -220,7 +232,7 @@ function LoadedViewer({ trace, tracePath, params, theme, toggleTheme }: ViewerPr
                 key={line.number}
                 line={line}
                 renderings={line.frames ? renderingsAt(line, stepIndex) : line.renderings}
-                isCurrent={line.number === currentLine}
+                isCurrent={line.number >= currentLine && line.number <= currentEnd}
                 cloaked={reveal && stepIndex !== null && (index.firstVisible.get(locationKey(path, line.number)) ?? Infinity) > stepIndex}
                 env={lineEnvs?.get(line.number)}
                 showNotes={showNotes}
@@ -424,14 +436,24 @@ function Scrubber({ stepIndex, numSteps, outline, goToStep }: ScrubberProps) {
 
 /** Scroll the current line to the middle of the view, unless it's already comfortably visible. */
 function scrollToCurrent(container: HTMLElement, behavior?: ScrollBehavior) {
-  const element = container.querySelector('[data-current]')
-  if (!element) return
-  const box = element.getBoundingClientRect()
+  const current = container.querySelectorAll('[data-current]')  // Every line of the current statement
+  if (current.length === 0) return
+  const top = current[0].getBoundingClientRect().top
+  const bottom = current[current.length - 1].getBoundingClientRect().bottom
   const view = container.getBoundingClientRect()
   const margin = Math.min(120, view.height / 4)
-  if (box.top >= view.top + margin && box.bottom <= view.bottom - margin) return
-  const distance = Math.min(Math.abs(box.top - view.top), Math.abs(box.bottom - view.bottom))
-  element.scrollIntoView({ block: 'center', behavior: behavior ?? (distance < view.height ? 'smooth' : 'instant') })
+  if (top >= view.top + margin && bottom <= view.bottom - margin) return
+  const distance = Math.min(Math.abs(top - view.top), Math.abs(bottom - view.bottom))
+  if (distance >= view.height) {
+    // Far away (e.g., into another function): jump there and center it
+    current[0].scrollIntoView({ block: 'center', behavior: 'instant' })
+    return
+  }
+  // Nearby: scroll just enough to bring it inside the margins, so stepping back and forth
+  // between neighboring lines (e.g., in a loop) doesn't swing the page each time
+  const tooTall = bottom - top > view.height - 2 * margin
+  const delta = bottom > view.bottom - margin && !tooTall ? bottom - (view.bottom - margin) : top - (view.top + margin)
+  container.scrollBy({ top: delta, behavior: behavior ?? 'smooth' })
 }
 
 /** Enter presenting (fullscreen, reveal as you step, no side panels) or leave it. */

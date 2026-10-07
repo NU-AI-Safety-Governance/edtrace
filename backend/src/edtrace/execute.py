@@ -1,4 +1,5 @@
 import argparse
+import ast
 import re
 import math
 import importlib
@@ -21,7 +22,7 @@ try:
     import sympy
 except ImportError:
     sympy = None
-from dataclasses import dataclass, asdict, field, is_dataclass, fields
+from dataclasses import dataclass, asdict, field, is_dataclass, fields, replace
 from .execute_util import Rendering, pop_renderings
 from .file_util import relativize
 
@@ -137,6 +138,54 @@ def parse_directives(line: str) -> list[Directive]:
     return directives
 
 
+@dataclass(frozen=True)
+class Statement:
+    start: int
+    """First line of the statement."""
+
+    end: int
+    """Last line of the statement (of just the header, for compound statements such as `for` or `with`)."""
+
+    with_body: tuple[int, int] | None = None
+    """For a `with` statement, the first and last lines of its body (leaving the body re-runs the header line)."""
+
+
+def index_statements(source: str) -> dict[int, Statement]:
+    """
+    Map each line to the innermost statement containing it, so that a statement
+    spanning several lines (e.g., a multi-line plot(...) call) is one step.
+    """
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return {}
+    statements: dict[int, Statement] = {}
+    for node in ast.walk(tree):  # Parents before children, so the innermost statement wins
+        if not isinstance(node, ast.stmt):
+            continue
+        body = getattr(node, "body", None)
+        compound = isinstance(body, list) and len(body) > 0 and body[0].lineno > node.lineno
+        end = body[0].lineno - 1 if compound else node.end_lineno
+        with_body = (body[0].lineno, node.end_lineno) if compound and isinstance(node, (ast.With, ast.AsyncWith)) else None
+        statement = Statement(start=node.lineno, end=end, with_body=with_body)
+        for line_number in range(node.lineno, end + 1):
+            statements[line_number] = statement
+    return statements
+
+
+def statement_directives(lines: list[str], statement: Statement) -> list[Directive]:
+    """The directives in the comments of any line of `statement`."""
+    text = "\n".join([lines[statement.start - 1].strip(), *lines[statement.start:statement.end]])
+    directives = []
+    try:
+        for token in tokenize.generate_tokens(io.StringIO(text).readline):
+            if token.type == tokenize.COMMENT:
+                directives.extend(parse_directives(token.string))
+    except (tokenize.TokenError, SyntaxError):
+        pass  # Keep the directives seen so far
+    return directives
+
+
 def get_inspect_expressions(directives: list[Directive]) -> list[str]:
     """
     If code contains "@inspect <variable>" (as a comment), return those variables.
@@ -247,6 +296,23 @@ def execute(module_name: str, inspect_all_variables: bool) -> Trace:
     # Stack of locations that we're stepping over
     stepovers = []
 
+    # Path -> line number -> statement, and path -> source lines (for the traced files)
+    statements: dict[str, dict[int, Statement]] = {}
+    source_lines: dict[str, list[str]] = {}
+
+    # Frame -> statement it last ran (to recognize leaving a with block)
+    last_statement = {}
+
+    def statement_at(path: str, line_number: int) -> Statement | None:
+        return statements.get(path, {}).get(line_number)
+
+    def to_statement_start(element: StackElement) -> StackElement:
+        """Show a line of a multi-line statement as the statement's first line."""
+        statement = statement_at(element.path, element.line_number)
+        if statement is None or statement.start == element.line_number:
+            return element
+        return replace(element, line_number=statement.start, code=source_lines[element.path][statement.start - 1].strip())
+
     def get_stack() -> list[StackElement]:
         """Return the last element of `stack`, but skip over items where local_trace_func is active."""
         stack = []
@@ -285,16 +351,17 @@ def execute(module_name: str, inspect_all_variables: bool) -> Trace:
         if current_path not in visible_paths:
             return trace_func
 
-        stack = get_stack()
-
         if event == "return":
+            last_statement.pop(frame, None)
             return trace_func
 
-        # Print the current line of code
+        # Each statement is one step, even when it spans several lines (Python reports each line)
+        stack = [to_statement_start(element) for element in get_stack()]
         item = stack[-1]
+        statement = statement_at(item.path, item.line_number)
 
         # Don't step into comprehensions since they're redundant and just stay on the line
-        if item.function_name in ("<listcomp>", "<lambda>"):
+        if item.function_name in ("<listcomp>", "<dictcomp>", "<setcomp>", "<genexpr>", "<lambda>"):
             return trace_func
 
         # Handle @stepover (don't trace into calls made from this line).  A stepover
@@ -305,7 +372,7 @@ def execute(module_name: str, inspect_all_variables: bool) -> Trace:
             (path, line_number, d) for path, line_number, d in stepovers
             if d < depth or (d == depth and (path, line_number) == (item.path, item.line_number))
         ]
-        directives = parse_directives(item.code)
+        directives = statement_directives(source_lines[item.path], statement) if statement else parse_directives(item.code)
         if any(directive.name == DIRECTIVE_STEPOVER for directive in directives):
             if (item.path, item.line_number, depth) not in stepovers:
                 stepovers.append((item.path, item.line_number, depth))
@@ -314,30 +381,36 @@ def execute(module_name: str, inspect_all_variables: bool) -> Trace:
         if any(d < depth for _, _, d in stepovers):
             return trace_func
 
-        print(f"  [{len(steps)} {os.path.basename(item.path)}:{item.line_number}] {item.code}")
+        # Leaving a with block runs its header line again; that's not a new step
+        previous = last_statement.get(frame)
+        last_statement[frame] = statement
+        if statement and statement.with_body and previous and statement.with_body[0] <= previous.start <= statement.with_body[1]:
+            return trace_func
 
         open_step = Step(
             stack=stack,
             env={},
         )
         if len(steps) == 0 or open_step.stack != steps[-1].stack:  # Only add a step if it's not redundant
+            print(f"  [{len(steps)} {os.path.basename(item.path)}:{item.line_number}] {item.code}")
             steps.append(open_step)
         open_step_index = len(steps) - 1
 
         def local_trace_func(frame, event, arg):
             """This is called *after* a line of code has been executed."""
-            # If the last step was the same line, then just use the same one
-            # Otherwise, create a new step (e.g., returning from a function)
-            if open_step_index == len(steps) - 1:
-                close_step = steps[-1]
-            else:
-                print(f"  [{len(steps)} {os.path.basename(item.path)}:{item.line_number}] {item.code}")
+            # If the last step was the same line, then just use the same one.
+            # Otherwise (e.g., returning from a function), make a new step, but only
+            # if it shows something (inspected values or renderings).
+            new_step = open_step_index != len(steps) - 1
 
-                close_step = Step(
-                    stack=stack,
-                    env={},
-                )
-                steps.append(close_step)
+            # Still in the middle of the statement (e.g., on its next line): values come when it's done
+            if event == "line" and statement is not None and statement_at(item.path, frame.f_lineno) is statement:
+                if not new_step:
+                    steps[-1].renderings = steps[-1].renderings + pop_renderings()
+                return trace_func(frame, event, arg)
+
+            close_step = Step(stack=stack, env={}) if new_step else steps[-1]
+            close_step.renderings = close_step.renderings + pop_renderings()
 
             # Update the environment with the actual values
             locals = frame.f_locals
@@ -368,8 +441,9 @@ def execute(module_name: str, inspect_all_variables: bool) -> Trace:
             for expr in clear_exprs:
                 close_step.env[expr] = None
 
-            # Capture the renderings of the last line
-            close_step.renderings = pop_renderings()
+            if new_step and (close_step.env or close_step.renderings):
+                print(f"  [{len(steps)} {os.path.basename(item.path)}:{item.line_number}] {item.code}")
+                steps.append(close_step)
 
             # Pass control back to the global trace function
             return trace_func(frame, event, arg)
@@ -380,6 +454,11 @@ def execute(module_name: str, inspect_all_variables: bool) -> Trace:
     # Run the module
     module = importlib.import_module(module_name)
     visible_paths.append(inspect.getfile(module))
+    for path in visible_paths:
+        with open(path) as f:
+            source = f.read()
+        statements[relativize(path)] = index_statements(source)
+        source_lines[relativize(path)] = source.split("\n")
     sys.settrace(trace_func)
     module.main()
     sys.settrace(None)
