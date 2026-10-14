@@ -947,7 +947,7 @@ kbd {
   transition: transform 0.2s ease;
 }
 .viewer.presenting.chrome-visible .topbar { transform: none; }
-.viewer.presenting .lecture-body { max-width: calc(58rem + var(--gutter)); padding-top: 3rem; }
+.viewer.presenting .lecture-body { max-width: calc(58rem + var(--gutter)); padding-top: 3rem; padding-bottom: 75vh; }  /* Room to raise the last steps to the anchor */
 .viewer.presenting .gutter { visibility: hidden; }
 .viewer.presenting .line.cloaked { visibility: hidden; }
 .viewer.presenting .line.current .line-main { box-shadow: -4px 0 0 var(--accent); }

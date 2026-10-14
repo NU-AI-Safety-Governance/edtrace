@@ -183,19 +183,19 @@ function LoadedViewer({ trace, tracePath, params, theme, toggleTheme }: ViewerPr
 
   // Keep the current line in view
   useLayoutEffect(() => {
-    if (scrollRef.current) scrollToCurrent(scrollRef.current)
-  }, [path, currentLine, stepIndex])
+    if (scrollRef.current) scrollToCurrent(scrollRef.current, presenting)
+  }, [path, currentLine, stepIndex, presenting])
 
   // Presenting and zooming reflow the page (and hide unreached lines), so find the current line again
   useLayoutEffect(() => {
-    if (scrollRef.current) scrollToCurrent(scrollRef.current, 'instant')
+    if (scrollRef.current) scrollToCurrent(scrollRef.current, presenting, 'instant')
   }, [presenting, zoom])
 
   // While presenting, also follow layout changes: going fullscreen, plots finishing loading
   useEffect(() => {
     const container = scrollRef.current
     if (!presenting || !container) return
-    const observer = new ResizeObserver(() => scrollToCurrent(container, 'instant'))
+    const observer = new ResizeObserver(() => scrollToCurrent(container, true, 'instant'))
     observer.observe(container)
     if (container.firstElementChild) observer.observe(container.firstElementChild)
     return () => observer.disconnect()
@@ -434,13 +434,26 @@ function Scrubber({ stepIndex, numSteps, outline, goToStep }: ScrubberProps) {
   )
 }
 
-/** Scroll the current line to the middle of the view, unless it's already comfortably visible. */
-function scrollToCurrent(container: HTMLElement, behavior?: ScrollBehavior) {
+/**
+ * Bring the current statement into view.
+ * Presenting: always put it at the same spot, a third of the way down, so what each step reveals appears where the
+ * audience is already looking, with room below for its output (raised further if a tall figure wouldn't fit).
+ * Reading: scroll only as far as needed, so stepping back and forth doesn't swing the page.
+ */
+function scrollToCurrent(container: HTMLElement, presenting: boolean, behavior?: ScrollBehavior) {
   const current = container.querySelectorAll('[data-current]')  // Every line of the current statement
   if (current.length === 0) return
   const top = current[0].getBoundingClientRect().top
   const bottom = current[current.length - 1].getBoundingClientRect().bottom
   const view = container.getBoundingClientRect()
+  if (presenting) {
+    const pad = 24
+    let delta = top - (view.top + view.height / 3)  // Top of the statement at the anchor
+    delta = Math.max(delta, bottom - (view.bottom - pad))  // ... unless that pushes its bottom off screen
+    delta = Math.min(delta, top - (view.top + pad))  // ... but never past its top
+    if (Math.abs(delta) > 1) container.scrollBy({ top: delta, behavior: behavior ?? 'smooth' })
+    return
+  }
   const margin = Math.min(120, view.height / 4)
   if (top >= view.top + margin && bottom <= view.bottom - margin) return
   const distance = Math.min(Math.abs(top - view.top), Math.abs(bottom - view.bottom))
